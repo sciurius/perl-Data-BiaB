@@ -22,7 +22,7 @@ package mmawrite;
 ##
 #####################################################################
 # CVS:
-# $Revision: 1.2 $
+# $Revision: 1.4 $
 #
 
 
@@ -36,13 +36,13 @@ package mmawrite;
 sub new {
   my $this = shift;
   #parameters
-  ($MMAfile, $title, $biabFileName, $biabStyleFile, $BPM, $key, $groove, $timeNom, $timeDenom,$version) = @_;
+  ($MMAfile, $title, $biabFileName, $biabStyleFile, $BPM, $key, $groove, $timeNom, $timeDenom,$version,$debug) = @_;
     
   my $class= ref($this) || $this;
   my $self = {};
   bless $self, $class;
 
-  print "mmawrite: born. file to write: $MMAfile \n";
+  print "mmawrite: born. file to write: $MMAfile \n" if ($debug);
   #&writeMMA;
   
   return $self;
@@ -52,7 +52,13 @@ sub putChordNames {
   my $this = shift;
   $num=@_;
   @aChords = @_;
-  #print "mmawrite: $num,$aChords[0] - $aChords[1]\n";
+  #print "mmawrite: $num,$aChords[0] - $aChords[1]\n" if ($debug);
+}
+sub putStyleMap {
+  my $this = shift;
+  $num=@_;
+  @aStyleMap = @_;
+  
 }
 #################################
 sub writeMMA {
@@ -67,6 +73,7 @@ sub writeMMA {
   $beatsPerBar=$timeNom; # todo for 6/8
   
   for(my $i=1;$i<@aChords; $i=$i+4) {
+    if ($aStyleMap[int $i/4]) {print MMA "// subStyle".$aStyleMap[int $i/4]."\n";}
     print MMA ((int $i/4)+1)."\t".join(' ',@aChords[$i..$i+$beatsPerBar-1])."\n";
   }
   close MMA;

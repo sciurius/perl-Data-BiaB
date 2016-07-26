@@ -23,7 +23,7 @@ package lilywrite;
 #  todo: triplet rests not supported!
 #
 # CVS:
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # 
 
 use biabdefs;
@@ -34,17 +34,20 @@ $octOffset=0;
 $melodyDebug=0;
 $trackTrip =0; #per-triplet counter
 $trackTripDur =0; #dur of tracked triplet note
+
+$lilyTargetVersion = "2.2.4"; 
+
 local $barDur;
 sub new {
   my $this = shift;
   #parameters
-  ($LILYfile, $WARNfile, $title, $biabFileName, $biabStyleFile, $BPM, $key, $majmin, $style, $timeNom, $timeDenom, $version) = @_;
+  ($LILYfile, $WARNfile, $title, $biabFileName, $biabStyleFile, $BPM, $key, $majmin, $style, $timeNom, $timeDenom, $version, $debug) = @_;
     
   my $class= ref($this) || $this;
   my $self = {};
   bless $self, $class;
 
-  print "lilywrite: born. file to write: $LILYfile in $timeNom/$timeDenom\n";
+  print "lilywrite: born. file to write: $LILYfile in $timeNom/$timeDenom\n" if ($debug);
   
   
     
@@ -76,11 +79,18 @@ sub putMelodyDuration {
 
 ###############################
 sub writeLily {
-  open(LILY, ">$LILYfile") or 
-                  die " error: $LILYfile : $!\n";
+ if (`which convert-ly`) {
+   open(LILY, "| convert-ly --from $lilyTargetVersion - >$LILYfile") or
+     die " error opening autoconversion pipe : $!\n";
+ } else {
+   open(LILY, ">$LILYfile") or
+     die " error: $LILYfile : $!\n";
+ } 
+#  open(LILY, ">$LILYfile") or 
+#                  die " error: $LILYfile : $!\n";
 
   print LILY '
-\\version "2.2.4"
+\\version "'.$lilyTargetVersion.'" 
 \\header{
 	title="'.$title.'"
 	tagline="Converted from the Band in a Box file:'.$biabFileName.' with biabconverter V.'.$version.'"
@@ -89,7 +99,7 @@ sub writeLily {
 \\score{
 	<<
 		\\new ChordNames \\chords {\\override ChordName #'font-size = #6
-		\\set chordNameSeparator = \\markup {  }  % no separator!
+		
 
 \t";
 
@@ -122,7 +132,7 @@ sub writeLily {
   
   $barDur = &getBarDur($timeNom,$timeDenom);
   $barDurStr = &getNoteDur($barDur,$timeNom,$timeDenom);
-  print "lilywrite: barDur $barDur\n";
+  print "lilywrite: barDur $barDur\n" if ($debug);
   #  find beginning time of melody
   ($preRests,$foo) = quantize($aMelodyWhen[0],$aMelodyWhen[0]);
   
@@ -135,7 +145,7 @@ sub writeLily {
   
   if ($preRests == 0 ) {$preRestStr =" ";}
     else {($preRestStr,$isTrip) = &getNoteDur($preRests,$timeNom,$timeDenom);}
-  if ($melodyDebug) { print "Melody begins after $preMeasures Measures and $preRestStr \n";}
+  print "Melody begins after $preMeasures Measures and $preRestStr \n" if ($debug);
   for ($i=0; $i<$preMeasures; $i++) {print LILY "r$barDurStr |\n\t";}
   if ($preRests >0) {print LILY "r$preRestStr ";}
   #now begins the melody;
@@ -143,7 +153,7 @@ sub writeLily {
   
   $inbarCount = $preRests;
   
-  if ($melodyDebug) { print "melody--debug\n"; }
+  print "melody--debug\n" if ($debug); 
   for($i=0; $i<@aMelodyWhen; $i++) {
     if ($aMelodyMIDInum[$i] == 0 ) {next;} #security
     my $thisWhen=$aMelodyWhen[$i];
@@ -165,13 +175,13 @@ sub writeLily {
     if ($isTrip) { 
       if ($trackTrip == 0) {
     	print LILY '\times 2/3 {';
-	print "lilywrite: starting triplet\n";
+	print "lilywrite: starting triplet\n" if ($debug);
       }
       $trackTrip++;
     }
     if ($trackTrip > 3) {
       print LILY '}';		#fails if triplet is last note of melody
-      print "lilywrite: ending triplet\n";
+      print "lilywrite: ending triplet\n" if ($debug);
       $trackTrip=0;$trackTripDur=0;
     }  
     
@@ -179,19 +189,19 @@ sub writeLily {
     if ($thisDurToNext == 0 ) { &warning("MEDIUM invalidNote: Nr $i"); next;} #security
     
     
-    if ($melodyDebug) {  print "note nr ".($i+1)." ---$thisStr---MIDIdur:$aMelodyDuration[$i]/$tmpToNext--thisDur/toNext:$thisDur/$thisDurToNext----MIDIpitch:$aMelodyMIDInum[$i]----\n";}
+    print "note nr ".($i+1)." ---$thisStr---MIDIdur:$aMelodyDuration[$i]/$tmpToNext--thisDur/toNext:$thisDur/$thisDurToNext----MIDIpitch:$aMelodyMIDInum[$i]----\n" if ($debug);
 
     unless ($thisDurToNext <= 64*$barDur) { next; } #security
 
     while ($thisDurToNext > 0) {
-      if ($melodyDebug) { print "inbarCount=$inbarCount - write $thisStr - $thisDurToNext\n";}
+      print "inbarCount=$inbarCount - write $thisStr - $thisDurToNext\n" if ($debug);
       if ($inbarCount + $thisDur > $barDur) {
-        #print "filling, but checking halfmeasure first\n";
+        #print "filling, but checking halfmeasure first\n" if ($debug);
         if (($inbarCount < $barDur/2 ) 
         and (($inbarCount + $thisDur > $barDur/2) and ($timeNom % 2 == 0)) #if we will cross the middle in even time
         and !(($inbarCount ==0) and ($thisDur >= $barDur))) {
           #first fill first half
-  	    if ($melodyDebug) { print "filling first half";}
+  	  print "filling first half" if ($debug);
   	  $nextDur = $thisDur - ($barDur/2 - $inbarCount);
           $thisDur = $thisDur - $nextDur;
           $thisDurToNext = $thisDurToNext - $thisDur;
@@ -200,12 +210,12 @@ sub writeLily {
           $inbarCount = $barDur/2;
           next;
         }
-          if ($melodyDebug) { print "filling bar nr $barCount, because $inbarCount + $thisDur > $barDur **************\n";}
+        print "filling bar nr $barCount, because $inbarCount + $thisDur > $barDur **************\n" if ($debug);
         $nextDur = $thisDur - ($barDur - $inbarCount);
         $thisDur = $thisDur - $nextDur;
         $thisDurToNext = $thisDurToNext - $thisDur;
         print LILY $thisStr.&getNoteDur($thisDur,$timeNom,$timeDenom)."~| % BarNr $barCount\n\t"; #barcheck
-          if ($melodyDebug) { print "filling bar nr $barCount, because $inbarCount + $thisDur > $barDur\n";}
+        print "filling bar nr $barCount, because $inbarCount + $thisDur > $barDur\n"  if ($debug);
         $thisDur = $nextDur;
         $inbarCount = 0;
         $barCount++;
@@ -217,7 +227,7 @@ sub writeLily {
         and (($inbarCount + $thisDur > $barDur/2) and ($timeNom % 2 == 0)) #if we will cross the middle in even time
         and !(($inbarCount ==0) and (($thisDur >= $barDur) or ($thisDur == 3/4*$barDur)))) { #if it's not a full note measure or a dotted half at bbeginning of measure
           #first fill first half
-  	    if ($melodyDebug) { print "filling first half\n";}
+  	  print "filling first half\n" if ($debug);
   	  $nextDur = $thisDur - ($barDur/2 - $inbarCount);
           $thisDur = $thisDur - $nextDur;
           $thisDurToNext = $thisDurToNext - $thisDur;
@@ -230,10 +240,10 @@ sub writeLily {
         print LILY $thisStr.&getNoteDur($thisDur,$timeNom,$timeDenom)." ";
         $inbarCount = $inbarCount + $thisDur;
         $thisDurToNext = $thisDurToNext - $thisDur;
-          if ($melodyDebug) { print "wrote $thisDur,$thisStr - new inbarCount $inbarCount\n";}
+        print "wrote $thisDur,$thisStr - new inbarCount $inbarCount\n" if ($debug);
         if ($inbarCount == $barDur) {
           print LILY "| % BarNr $barCount\n\t"; #barcheck
-            if ($melodyDebug) { print "bar $barCount end ************************************\n";  }
+          print "bar $barCount end ************************************\n" if ($debug);  
  	  $inbarCount=0;
 	  $barCount++;
         }	
@@ -249,7 +259,7 @@ sub writeLily {
   
   
   $numOfLines = int $barCount / 4 +1;
-  print "number of lines: $numOfLines \n";
+  print "number of lines: $numOfLines \n" if ($debug);
   print LILY "}";
   if ($timeNom == 4) {print LILY "	
        \\new Voice {  
@@ -267,7 +277,7 @@ sub writeLily {
 ";
   
   close LILY;
-  print "wrote $LILYfile\n";
+  print "lilywrite: wrote $LILYfile\n";
 }
 
 #########################################

@@ -21,7 +21,7 @@ package biabread;
 ##   provides a class to read band-in-a-box file formats
 ##
 # CVS:
-# $Revision: 1.6 $
+# $Revision: 1.8 $
 #
 
 use Exporter;
@@ -48,13 +48,14 @@ $foundLyrics=0;
 
 
 sub new {
-  my $this = shift;
-  my $BIABfile = shift;
-  $WARNfile = shift;
+  my $this = shift();
+  my $BIABfile = shift();
+  $WARNfile = shift();
+  $debug=shift();
   my $class= ref($this) || $this;
   my $self = {};
   bless $self, $class;
-  print "biabread: born. file to read: $BIABfile \n";
+  print "biabread: born. file to read: $BIABfile \n" if ($debug);
   &readBIABfile($BIABfile);
   return $self;
  
@@ -66,6 +67,7 @@ sub basicStyle {$basicStyle;}
 sub BPM { $BPM; }
 sub key { $key; }
 sub aChords { @aChords; }
+sub aStyleMap { @styleMap; }
 sub aExts { @aExts; }
 sub aMelodyWhen { @aMelodyWhen; }
 sub aMelodyChannel { @aMelodyChannel; }
@@ -92,10 +94,10 @@ sub readBIABfile { #needs a filename
   # length of title
   $bytesread = read(*INFILE, $byte, 1);
   $titleLen=ord $byte;
-  print "biabread: title length: $titleLen \n";
+  print "biabread: title length: $titleLen \n" if ($debug);
   $bytesread = read(*INFILE, $bytes, $titleLen);
   $title=$bytes;
-  print "biabread: title: ".$title."\n";
+  print "biabread: title: ".$title."\n" if ($debug);
 
   #skip two bytes
   $bytesread = read(*INFILE, $bytes, 2);
@@ -103,20 +105,22 @@ sub readBIABfile { #needs a filename
   #read basic style
   $bytesread = read(*INFILE, $byte, 1);
   $basicStyle = ord $byte;
-  print "biabread: basic style nr: $basicStyle \n";
+  print "biabread: basic style nr: $basicStyle \n" if ($debug);
 
   #read Key
   $bytesread = read(*INFILE, $byte, 1);
   $key = ord $byte;
   
-  print "biabread: keyNr: $key \n";
+  print "biabread: keyNr: $key \n" if ($debug);
 
   #read BPM
   $bytesread = read(*INFILE, $byte, 1);
   $BPM = ord $byte;
-  print "biabread: BPM: $BPM \n";
+  print "biabread: BPM: $BPM \n" if ($debug);
 
   #read Style Map
+  #$bytesread = read(*INFILE, $byte, 256);
+  #print $byte;
   $i=0;
   until($i==256) {
     $bytesread = read(*INFILE, $byte, 1);
@@ -124,9 +128,13 @@ sub readBIABfile { #needs a filename
       $bytesread = read(*INFILE, $byte, 1);
       $i = $i + ord $byte;
     }
-    else { $i++ } #forget about style changes....to be implemented later
+    else { 
+      print "biabread: stylemap entry at $i: ".ord($byte)."\n" if ($debug); 
+      $styleMap[$i-1] = ord $byte; 
+      $i++;
+    } 
   }    
-  #print "biabread: StyleMap read \n";
+  #print "biabread: StyleMap read \n" if ($debug);
 
   #read chord types
   $i=1;
@@ -141,7 +149,7 @@ sub readBIABfile { #needs a filename
       $i++;
     }
   }
-  #print "biabread: chordTypes read \n";
+  #print "biabread: chordTypes read \n" if ($debug);
 
   #read chord names
   $i=1;
@@ -156,7 +164,7 @@ sub readBIABfile { #needs a filename
       $i++;
     }
   }
-  #print "biabread: chordNames read \n";
+  #print "biabread: chordNames read \n" if ($debug);
   $foundChords = 1;
   
   #read number of bars used
@@ -167,40 +175,40 @@ sub readBIABfile { #needs a filename
   # for further computing, the file is read into an array
   
   $bytesread = read(*INFILE, $byte, 99999); 
-  #print "$bytesread \n";
+  #print "$bytesread \n" if ($debug);
 
   if ($byte =~ /@STYarray/) {
   
-    #print "biabread: anz Zeichen vor STY: ".length($`)."\n";
+    #print "biabread: anz Zeichen vor STY: ".length($`)."\n" if ($debug);
     @preStyle = split('',$`);
     
     ## style file names may only be 8 characters long 
     if (($byte =~ /$PRESTYa(.{1,8})\.STY/) || ($byte =~ /$PRESTYb(.{1,8})\.STY/) || ($byte =~ /$PRESTYc(.{1,8})\.STY/) || ($byte =~ /$PRESTYd(.{1,8})\.STY/) || ($byte =~ /$PRESTYe(.{1,8})\.STY/)) { #not sure if this always works => thats why I use the if
-      #print "biabread: PRESTY found!\n";
+      #print "biabread: PRESTY found!\n" if ($debug);
       $styleFile = $+;
     } 
     else {
       &warning("MINOR WARNING: presty not found. Style file name may be ugly");
       $styleFile = join('',@preStyle[$#preStyle-9..$#preStyle-1]);
     }  
-    print "biabread: Style File: ---$styleFile--- \n";
+    print "biabread: Style File: ---$styleFile--- \n" if ($debug);
   }  else { &warning("WARNING: 'STY' not found => using basic style"); $styleFile="unknown";}
   if ($byte =~ /@FFDarray/) {
-      #print "biabread: anz Zeichen vor FFD: ".length($`)."\n";
+      #print "biabread: anz Zeichen vor FFD: ".length($`)."\n" if ($debug);
       @rest=split('',$');
 
       #read note count
       #$bytesread = read(*INFILE, $byte, 1);
 
       $noteCount = (ord $rest[0]) + 256* (ord $rest[1]);
-      print "biabread: noteCount $noteCount \n";
+      print "biabread: noteCount $noteCount \n" if ($debug);
   } else { &warning("WARNING: 'FFD' not found => don't know number of notes (guessing 999)"); $noteCount = 999;}
   if ($byte =~ /@ABCarray/) {
-        #print "biabread: anz Zeichen vor A0 B0 C1: ".length($`)."\n";
+        #print "biabread: anz Zeichen vor A0 B0 C1: ".length($`)."\n" if ($debug);
   
         @rest=split('',$');
 	$maxNotes=int length($')/12;
-	#print "biabread: anz Zeichen verbleibend:$maxNotes\n";
+	#print "biabread: anz Zeichen verbleibend:$maxNotes\n" if ($debug);
 	@melody = ();
         # hier beginnen die noten
         for($i=0; $i<$noteCount; $i++) {

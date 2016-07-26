@@ -23,7 +23,7 @@ package biabdefs;
 ##
 ####################################################################
 # CVS:
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 #
 use Exporter;
 use Switch;
@@ -223,14 +223,14 @@ sub getMMAgroove { # input: name of basic style nr.
   $mmaStyle = $mmaStyleRef[$biabStyleNr-1];
   $timeNom = $timeNomRef[$biabStyleNr-1];
   $timeDenom = $timeDenomRef [$biabStyleNr-1];
-  print "biabdefs: basic Style $biabStyleNr =>groove: $mmaStyle $timeNom/$timeDenom\n";
+  print "biabdefs: basic Style $biabStyleNr =>groove: $mmaStyle $timeNom/$timeDenom\n" if ($debug);
   
   # basic style might be overridden by user style. Append more stlyes!
   
   if ($biabStyle =~ /TENDERLY/) { $mmaStyle="Waltz"; $timeNom=3; $timeDenom=4; }
   if ($biabStyle =~ /LRBOSLOW/) { $mmaStyle="BossaNova"; $timeNom=4; $timeDenom=4; }
   if ($biabStyle =~ /JEAN/) { $mmaStyle="Waltz"; $timeNom=3; $timeDenom=4; }
-  print "biabdefs: chosen style: $mmaStyle $timeNom/$timeDenom\n";
+  print "biabdefs: chosen style: $mmaStyle $timeNom/$timeDenom\n" if ($debug);
   #unless($mmaStyle) {
   #    print "Didn't find apropriate style";
   #    $mmaStyle="Swing"; $timeNom=4; $timeDenom=4; }
@@ -280,8 +280,10 @@ sub getBarDur {
   if (($nom == 3) and ($denom == 4)) { $barDur = 360; $barRefDur = 480; $smallestNote = $barRefDur/8;}
   if (($nom == 4) and ($denom == 4)) { $barDur = 480; $barRefDur = 480; $smallestNote = $barRefDur/8;}
   if (($nom == 6) and ($denom == 8)) { $barDur = 320; $barRefDur = 480; $smallestNote = $barRefDur/8;} #todo
-  print "biabdefs: $nom/$denom , barDur=$barDur\n";
-  print "biabdefs: smallestNote = $smallestNote\n";
+  
+  if ($aQuant) {$smallestNote = $barRefDur/$aQuant;}  #command line override
+  print "biabdefs: $nom/$denom , barDur=$barDur\n" if ($debug);
+  print "biabdefs: smallestNote = $smallestNote\n" if ($debug);
   
   # define forbidden single-note durations (they can't be written 
   # as one note; like a quarter plus a 16th -> no possible notation) 
@@ -318,7 +320,7 @@ sub quantize {
    $qDur = $trackTripDur; 
    $qDurToNext = $trackTripDur; 
    $isTrip=1;
-   print "biabdefs: filling triplet!\n";
+   print "biabdefs: filling triplet!\n" if ($debug);
  #}
  #else {
   if ($qDurToNext == 0) { $qDurToNext=$smallestNote; }
@@ -401,6 +403,12 @@ sub sgn { # signum-function
 sub useWarnFileName {
   # this function is only needed to pass the value to this module. Other ways?
   $WARNfile = shift;
+}  
+sub overrideSmallestNote {
+  $aQuant = shift();
+}
+sub enableDebug {
+  $debug=1;
 }  
 sub warning {
   open(WARN, ">>$WARNfile") or 

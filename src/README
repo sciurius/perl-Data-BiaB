@@ -1,6 +1,6 @@
 -------------------------------------------------------------------
 
-         Band-In-A-Box File Converter 0.1
+         Band-In-A-Box File Converter 0.4
            ----------------------------
              Alain Brenzikofer 
                brenzi@student.ethz.ch
@@ -24,8 +24,14 @@ biabconverter is able to convert most biab files, but most converted
 files will need some manual editing. Don't expect too much from this
 early version!
 
-thanks to Alf Warnock for reverse-engineering the BiaB file format 
-and for sharing his knowledge with me.
+  
+NEWS in version 0.4
+--------------------
+-commandline options
+-styleMap evaluated to structure output (unfinshed)
+-Lilypond output is automatically converted to installed
+ Lilypond version using convert-ly
+-bugfixes  
 
 WARNINGS OUTPUT
 ---------------
@@ -54,7 +60,13 @@ KNOWN BUGS:
  notes at the end of the .ly file! This will break the 
  4-equal-width-bars-per-line rule.
 -only 4/4 and 3/4 are known to work yet.  
+-quantization only works properly in simple cases => You should quantize 
+ already in biab before converting for now
 
+THANKS to:
+----------
+Alf Warnock for reverse-engineering the BiaB file format 
+  and for sharing his knowledge with me.
+Matthias Neeracher for testing, improving and setting up 
+  Mac fink packages 
 
-
-Alain Brenzikofer

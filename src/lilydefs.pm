@@ -22,7 +22,7 @@ package lilydefs;
 ##
 ####################################################################
 # CVS:
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 #
 
 use Exporter;
@@ -42,7 +42,7 @@ use Switch;
 $acc = 0;
 ####################################
 sub getLilyNote{  #needs a MIDI note number
-  print "lilydefs: acc=$acc\n";
+  #print "lilydefs: acc=$acc\n";
   if ($acc>0) { return $sharpNotesLily[$_[0] % 12]; }
   else { return $flatNotesLily[$_[0] % 12]; }
 }  
@@ -59,6 +59,8 @@ sub getLilyExt { # convert a mma compatible Extension to Lilypond
     case '7b5' 		{ $ext = '7.5-';}
     case 'maj9#11' 	{ $ext = '7+.9.11+';}
     case '7#11' 	{ $ext = '7.11+';}
+    case '69' 		{ $ext = '6.9';}
+    case '13' 		{ $ext = '11.13';} 
     else { 
       $ext =~ s/([b|#])([5|9|11|13])/\.$2$1/g;
       $ext =~ s/b/-/g;

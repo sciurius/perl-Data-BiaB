@@ -24,11 +24,17 @@
 ##
 #####################################################################
 
-$version="0.2.2";
+$version="0.4";
 
 # CVS:
-# $Revision: 1.2 $
+# $Revision: 1.4 $
 # $Log: biabconverter,v $
+# Revision 1.4  2004/12/18 23:07:21  brenzala
+# reading styleMap, no substyle changes for mma yet, cutting empty measures at the end for mma
+#
+# Revision 1.3  2004/12/18 21:34:13  brenzala
+# Matthias'changes plus cmdline options
+#
 # Revision 1.2  2004/12/09 23:27:44  brenzala
 # triplets support hack (very bad hack!)
 # other fixes. quantization is quite good, as long as there are no
@@ -68,16 +74,31 @@ $LISTfile="biabconverter.list";
 	$outputDir='';
 	while ($#ARGV >= 0) {
 	   $argument=shift;
-	   if ($argument =~ /^-mma$/) {$mmaOnly=1;}
-	   elsif ($argument =~ /^-lily$/) {$lilyOnly=1;}
-	   elsif ($argument =~ /^(-dir)$/) {
+	   if ($argument =~ /^-mma$/i) {$mmaOnly=1;}
+	   elsif ($argument =~ /^-lily$/i) {$lilyOnly=1;}
+	   elsif ($argument =~ /^-dir$/i) {
 	   	$outputDir=shift(); 
 		#print "<<ARG>>output dir: $outputDir\n"; 
 	   }
+	   elsif ($argument =~ /^-time$/i) {
+	   	$timeArg = shift();
+		$timeArg =~ /(\d*)\/(\d*)/;
+		$aTimeNom = $1;
+		$aTimeDenom = $2;
+		#print "--$timeArg-- --$aTimeNom-- / --$aTimeDenom--\n";
+	   }
+	   elsif ($argument =~ /^-quant$/i) {
+	   	&biabdefs::overrideSmallestNote(shift());
+	   }
+	   elsif ($argument =~ /^-debug$/i) {
+	   	$debug=1;
+		&biabdefs::enableDebug;
+	   }
+	   
 	   else {$BIABfile = $argument;}
 	   #if ((!$upload)&&(!$download)) {&usage;}
 	}
-	unshift(@ARGV,@files);
+	#unshift(@ARGV,@files);
 	#fix output directory string
 	unless ($outputDir eq '') { 
   	  $outputDir =~ s/\/$//;	
@@ -85,10 +106,13 @@ $LISTfile="biabconverter.list";
 	  $WARNfile=$outputDir.$WARNfile;
 	  $LISTfile=$outputDir.$LISTfile;
   	}
+############################################
 
 
 #if ($ARGV[0] eq '') { &usage; }
 if ($BIABfile eq '') { &usage; }
+print "This is biabconverter $version\n";
+
 #$BIABfile = $ARGV[0];
 #$MMAfile = $BIABfile; $MMAfile =~ s/\..*/\.mma/;
 #$LILYfile = $BIABfile; $LILYfile =~ s/\..*/\.ly/;
@@ -96,7 +120,7 @@ if ($BIABfile eq '') { &usage; }
 &warning("#### warnings for $BIABfile");
 &biabdefs::useWarnFileName($WARNfile);
 # read the biab file
-$biab = new biabread($BIABfile,$WARNfile);
+$biab = new biabread($BIABfile,$WARNfile,$debug);
 
 #determine file names
 $biabName=$BIABfile;
@@ -105,7 +129,8 @@ $biabName = $1;
 
 $outName=$biab->title;
 $outName =~ s/[\ |\W]+/-/g; #replace all spaces and non-alphanumerics by "-"
-$outName =~ s/-(?![^\Z])//g; #remove possible "-" at the end
+#$outName =~ s/-(?![^\Z])//g; #remove possible "-" at the end
+$outName =~ s/-*$//g;#remove possible "-" at the end
 $outName =~ s/([^\W0-9_])/\l$1/g; #lowercase
 $outName = $outName."_".$biabName;
 #$outName =~ s/\W//g;
@@ -117,6 +142,8 @@ $lilyName = $outputDir.$outName.".ly";
 # find style substitute for mma and time character ( 3/4, 4/4....)
 ($mmaStyle, $timeNom, $timeDenom) = getMMAgroove($biab->basicStyle, $biab->styleFile);
 
+ #cmdline override
+if ($aTimeNom) { $timeNom = $aTimeNom; $timeDenom = $aTimeDenom; }
 # translate chords
 &getChordNames;
 
@@ -126,24 +153,30 @@ $songKey = getKey($biab->key);
 $lilyKey = $tmp[0];
 $MajMin = $tmp[1];
 
-print "biabconverter: songKey: $songKey : Key $lilyKey $MajMin\n";
+print "biabconverter: songKey: $songKey : Key $lilyKey $MajMin\n" if ($debug) ;
 #$songTime = $REEL; #test
 
+unless ($lilyOnly) {
 #######################
 # create an mmaWriter
-$mma = new mmawrite($mmaName,$biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $songKey, $mmaStyle, $timeNom, $timeDenom, $version);
 
-#and pass them to mmawrite
+$mma = new mmawrite($mmaName,$biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $songKey, $mmaStyle, $timeNom, $timeDenom, $version, $debug);
+
+#pass chords to mmawrite
 $mma->putChordNames(@mmaChords);
+# pass styleMap to mmawrite
+$mma->putStyleMap($biab->aStyleMap);
 
 #write the mma file
 $mma->writeMMA;
 
+}
+unless ($mmaOnly) {
 ######################
 # create LilyWriter
 
 
-$lily = new lilywrite($lilyName, $WARNfile, $biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $lilyKey, $MajMin, $mmaStyle, $timeNom, $timeDenom, $version);
+$lily = new lilywrite($lilyName, $WARNfile, $biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $lilyKey, $MajMin, $mmaStyle, $timeNom, $timeDenom, $version, $debug);
 $lily->putChordNames(@lilyChords);
 $lily->putChordDurs(@lilyChordDurs);
 $lily->putMelodyWhen($biab->aMelodyWhen);
@@ -151,7 +184,7 @@ $lily->putMelodyMIDInum($biab->aMelodyMIDInum);
 $lily->putMelodyDuration($biab->aMelodyDuration);
 
 $lily->writeLily;
- 
+} 
 # write song database entry
 $niceTitle = $biab->title;
 $niceTitle =~ s/\ {2,}//g; #remove multiple spaces
@@ -184,8 +217,15 @@ sub getChordNames {
   @lilyChordDurs = ();
   @lilyChordExts = ();
   @lilyChords = ();
-  print "getChordNames: ".$biab->aChords."\n";
-  for($i=0; $i<$biab->aChords-1; $i++) {
+  print "main: getChordNames: ".$biab->aChords."\n" if ($debug);
+  # delete empty tail of chords array
+  @aChords=$biab->aChords;
+  $i=1020; #strange values if starting at 1024
+  until (defined($aChords[$i])) { $i--; }
+  $lastChordInd=$i;
+  
+  print "main: AfterCut: number of filled measures: ".($i/4).", lastChord: ".$aChords[$i]."\n" if ($debug);
+  for($i=0; $i<=$lastChordInd; $i++) {
     if ( ($biab->aChords)[$i] ) {
      $mmaRoot = &biabdefs::getChordRootClean(($biab->aChords)[$i]);#s/([^\W0-9_])/\l$1/g;    
      $lilyRoot = &lilydefs::getLilyNoteFromMMA($mmaRoot);
@@ -269,11 +309,25 @@ print STDERR <<EOF;
 This is 'biabconverter $version'
 by Alain Brenzikofer
 
-Syntax:  biabconverter(.pl) <biabfile>  
+Syntax:  biabconverter [options] <biabfile>  
 
 Purpose: Convert Band in a Box files to MMA and Lilypond formats
 
-Details: no command line options yet.
+Options:
+	-dir <directory>
+		specify an output directory
+	-time <X/Y>
+		override time guessed from biab file. 
+		May be 3/4, 4/4 (or 12/8...to be tested)	
+	-quant <..>
+		set smallest note for quantization. Enter
+		denominator only (1/16 would be '-quant 16'
+	-lily
+		write Lilypond file only
+	-mma
+		write MMA file only	
+	-debug
+		show debug info		
 
 EOF
 exit 1;
