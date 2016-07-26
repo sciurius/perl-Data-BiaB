@@ -4,7 +4,6 @@
 #
 mkdir /usr/share/biabconverter
 mkdir /usr/share/biabconverter/templates
-cp *.pm /usr/share/biabconverter
-cp biabconverter /usr/share/biabconverter
+cp * /usr/share/biabconverter
 mv /usr/share/biabconverter/*.lyt /usr/share/biabconverter/templates
 ln -s /usr/share/biabconverter/biabconverter /usr/bin/biabconverter

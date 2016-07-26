@@ -22,9 +22,8 @@ package lilywrite;
 ##
 #  todo: triplet rests not supported!
 #
-# CVS:
-# $Revision: 1.20 $
-# 
+# $Id: lilywrite.pm 36 2007-01-10 21:16:01Z brenzi $
+
 
 use biabdefs;
 use lilydefs;

@@ -22,8 +22,7 @@ package biabdefs;
 ##  for MMA. Any contributions and add-ons are welcome!
 ##
 ####################################################################
-# CVS:
-# $Revision: 1.16 $
+# $Id: biabdefs.pm 39 2007-09-08 13:03:45Z brenzi $
 #
 use Exporter;
 use Switch;
@@ -163,7 +162,7 @@ sub getChordExt {
     case 15 { $ext ="2"; }
     case 16 { $ext ="m"; }
     case 17 { $ext ="maug"; }
-    case 18 { $ext ="mMaj7"; }
+    case 18 { $ext ="mM7"; }  #bugfix Mauch
     case 19 { $ext ="m7"; }
     case 20 { $ext ="m9"; }
     case 21 { $ext ="m11"; }

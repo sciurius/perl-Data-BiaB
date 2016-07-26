@@ -1,6 +1,6 @@
 -------------------------------------------------------------------
 
-         Band-In-A-Box File Converter 0.6.4
+         Band-In-A-Box File Converter 0.6.8
            ----------------------------
              Alain Brenzikofer 
                biabconverter@brenzi.ch
@@ -20,6 +20,16 @@
 	
 biabconverter is able to convert most biab files, but most converted 
 files will need some manual editing. 
+
+In this file you find a short version history followed by a couple of tips for using biabconverter. A manual doesn't exist yet.
+
+NEWS in version 0.6.8
+----------------------
+-bugfix for mM7 chord previously named mMaj7 which was not recognized by MMA
+
+NEWS in version 0.6.6
+----------------------
+-bugfix for lilypond template search path and install script
 
 NEWS in version 0.6.4
 ----------------------
@@ -54,6 +64,25 @@ NEWS in version 0.4
 -Lilypond output is automatically converted to installed
  Lilypond version using convert-ly
 -bugfixes  
+
+LILYPOND TEMPLATES
+--------------------
+Biabconverter needs a lilypond template file to be able to produce a .ly file. Biabconverter comes with two such templates:
+
+default.lyt
+	a simple sheet
+band.lyt
+	the song is automatically transposed for Bb and Eb instruments. 
+	Lilypond will produce all sheets in one PDF. 
+	
+The following paths are searched for .lyt files in given order:
+
+1. BIABCONVERTER_TEMPLATES (*)
+2. ~/.biabconverter/templates
+3. /usr/share/biabconverter/templates
+
+(*) You may set this ENV-variable to a path of your choice
+
 
 WARNINGS OUTPUT
 ---------------

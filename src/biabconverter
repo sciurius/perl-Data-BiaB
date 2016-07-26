@@ -24,59 +24,10 @@
 ##
 #####################################################################
 #
+# $Id: biabconverter 43 2007-09-08 13:21:54Z brenzi $
 
 
-
-$version="0.6.4";
-
-# CVS:
-# $Revision: 1.15 $
-# $Log: biabconverter,v $
-# Revision 1.15  2005/03/05 14:04:14  brenzala
-# release cosmetics 0.6.2
-#
-# Revision 1.14  2005/03/05 13:57:57  brenzala
-# release cosmetics
-#
-# Revision 1.13  2005/03/05 13:54:50  brenzala
-# Matthias' Watermelon_Hang-bug fixed and included his homedir patch
-#
-# Revision 1.12  2005/02/17 19:52:16  brenzala
-# revision revised
-#
-# Revision 1.11  2005/02/17 19:51:30  brenzala
-# bugfix 'WatermelonMan'
-#
-# Revision 1.10  2005/02/12 18:25:13  brenzala
-# Matthias' template support integrated
-#
-# Revision 1.9  2005/01/13 23:02:28  brenzala
-# new batch processing, more chord extensions
-#
-# Revision 1.8  2005/01/09 13:59:38  brenzala
-# update
-#
-# Revision 1.7  2005/01/07 00:28:32  brenzala
-# quantization works for round-midnight and que sera...thanks to a new commandline arg -qtrip
-#
-# Revision 1.6  2005/01/02 17:59:25  brenzala
-# yet a better structure. triplets work +-, there are too many though
-#
-# Revision 1.5  2004/12/31 12:16:09  brenzala
-# completly new, recursive lilyWrite structure
-#
-# Revision 1.4  2004/12/18 23:07:21  brenzala
-# reading styleMap, no substyle changes for mma yet, cutting empty measures at the end for mma
-#
-# Revision 1.3  2004/12/18 21:34:13  brenzala
-# Matthias'changes plus cmdline options
-#
-# Revision 1.2  2004/12/09 23:27:44  brenzala
-# triplets support hack (very bad hack!)
-# other fixes. quantization is quite good, as long as there are no
-# triplets.
-#
-#
+$version="0.6.8";
 
 # todo:
 # -find a way to get convert-ly working when version stays the same (causing empty files now)
@@ -108,6 +59,7 @@ use File::Spec;
  unless ($0 =~ /cvs/) { 
    push(@lilyPath, "$ENV{HOME}/.biabconverter/templates");
    push(@lilyPath, "$FindBin::Bin/../share/biabconverter/templates");
+   #push(@lilyPath,"/usr/share/biabconverter/templates/");
  }
 $lilyTmpl = "default.lyt";
 
@@ -253,6 +205,7 @@ $mma->writeMMA;
 unless ($mmaOnly) {
 ######################
 # create LilyWriter
+print "biabconverter: lilypond template search path: `@lilyPath`.\n" if ($debug);
 if ($lilyTmpl !~ m|^\.{,2}/|) {
    #
    # Template is not specified by absolute path: Perform path search
@@ -265,7 +218,7 @@ if ($lilyTmpl !~ m|^\.{,2}/|) {
      }
    }
 }
-die "Can't find lilypond template `$lilyTmpl`." unless -r $lilyTmpl;
+die "Can't find lilypond template `$lilyTmpl` in `@lilyPath`. \n" unless -r $lilyTmpl;
 
 $lily = new lilywrite($lilyName, $WARNfile, $biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $lilyKey, $MajMin, $mmaStyle, $timeNom, $timeDenom, $version, $lilyTmpl, $biab->foundMelody, $debug);
 $lily->putChordNames(@lilyChords);
@@ -432,7 +385,10 @@ Options:
 		write Lilypond file only
 	-lilyTemplate
 		choose a template for lily (.lyt file must be 
-		located in ~/.biabconverter/templates)
+		located in ~/.biabconverter/templates or 
+		/usr/share/biabconverter/templates or the 
+		path specified by the ENV-variable 
+		BIABCONVERTER_TEMPLATES)
 	-mma
 		write MMA file only	
 	-debug

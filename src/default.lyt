@@ -1,4 +1,4 @@
-\version "<{TARGET_VERSION}>"
+\version "2.4"
 
 \header {
 	title	= "<{TITLE}>"

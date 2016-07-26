@@ -20,8 +20,7 @@ package biabread;
 ##
 ##   provides a class to read band-in-a-box file formats
 ##
-# CVS:
-# $Revision: 1.9 $
+# $Id: biabread.pm 36 2007-01-10 21:16:01Z brenzi $
 #
 
 use Exporter;

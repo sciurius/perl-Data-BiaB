@@ -21,9 +21,8 @@ package mmawrite;
 ##  This file provides a class for writing MMA files
 ##
 #####################################################################
-# CVS:
-# $Revision: 1.4 $
-#
+# 
+# $Id: mmawrite.pm 36 2007-01-10 21:16:01Z brenzi $
 
 
 

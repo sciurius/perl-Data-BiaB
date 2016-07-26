@@ -1,4 +1,12 @@
 BUG
+chord mMaj7 is not recognized by MMA, changed to mM7
+FIXED for 0.6.8
+
+BUG
+without installing the script doesn't find the *.lyt templates. Works when setting the BIABCONVERTER_TEMPLATES variable
+FIXED for 0.6.6
+
+BUG
 1970s/glitter.sga: seems to have melody without notes. caused trouble in lilywrite, 
 FIXED
 

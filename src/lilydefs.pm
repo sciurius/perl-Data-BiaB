@@ -21,9 +21,7 @@ package lilydefs;
 ##  are being translated yet. Any contributions and add-ons are welcome!
 ##
 ####################################################################
-# CVS:
-# $Revision: 1.12 $
-#
+# $Id: lilydefs.pm 36 2007-01-10 21:16:01Z brenzi $
 
 use Exporter;
 

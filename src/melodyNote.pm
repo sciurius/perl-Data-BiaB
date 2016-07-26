@@ -1,3 +1,22 @@
+###################################################################
+#
+#         Band-In-A-Box File Converter
+#           ----------------------------
+#             Alain Brenzikofer 
+#               brenzi@student.ethz.ch
+#     
+# 	a quick hack to parse Band in a box files.
+# 	based on the Delphi coded "BIABTools" of Alf Warnock
+#	It doesn't work with all files yet!!!!!!
+#
+#	License: GPL
+#
+# 	all user-customizeable values are located in 
+# 	biabdefs.pm, lilydefs.pm and mmadefs.pm
+# 	they are still incomplete! Please submit any new findings! 
+# 	
+####################################################################
+## $Id: melodyNote.pm 36 2007-01-10 21:16:01Z brenzi $
 ####################### melodyNote class ###################
 package melodyNote;
   #my $onset;
