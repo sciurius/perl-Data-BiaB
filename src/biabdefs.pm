@@ -23,7 +23,7 @@ package biabdefs;
 ##
 ####################################################################
 # CVS:
-# $Revision: 1.11 $
+# $Revision: 1.16 $
 #
 use Exporter;
 use Switch;
@@ -31,9 +31,6 @@ use Switch;
 @EXPORT = ( 	'getChordRoot', 
 		'getChordExt' ,
 		'getMMAgroove',
-		'getNoteDur',
-		'getBarDur',
-		'quantize',
 		'getKey',
 		'useWarnFileName');
 
@@ -141,7 +138,7 @@ sub getChordRootClean {
 }  
 sub getKey {  
   my $nr=$_[0];
-  &warning("bla");
+  #&warning("bla");
   @allKeys = ( '/','C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B','C#','D#','F#','G#','A#','Cm','Dbm','Dm','Ebm','Em','Fm','Gbm','Gm','Abm','Am','Bbm','Bm','C#m','D#m','F#m','G#m','A#m');
   return $allKeys[$nr];
 }  
@@ -165,6 +162,7 @@ sub getChordExt {
     case 14 { $ext ="69"; }
     case 15 { $ext ="2"; }
     case 16 { $ext ="m"; }
+    case 17 { $ext ="maug"; }
     case 18 { $ext ="mMaj7"; }
     case 19 { $ext ="m7"; }
     case 20 { $ext ="m9"; }
@@ -176,14 +174,17 @@ sub getChordExt {
     case 26 { $ext ="m69"; }
     case 32 { $ext ="m7b5"; }
     case 33 { $ext ="dim"; }
+    case 34 { $ext ="m9b5"; }
     case 40 { $ext ="5"; } #
     case 56 { $ext ="7+"; }   #brenzi
     case 57 { $ext ="+"; }
+    case 58 { $ext ="13+"; }
     case 64 { $ext ="7"; }
     case 65 { $ext ="13"; }
     case 66 { $ext ="7b13"; }
     case 67 { $ext ="7#11"; }
     case 70 { $ext ="9"; }
+    case 70 { $ext ="9b13"; }
     case 73 { $ext ="9#11"; }
     case 74 { $ext ="13#11"; }
     case 76 { $ext ="7b9"; }
@@ -207,6 +208,8 @@ sub getChordExt {
     case 129 { $ext ="13sus"; }
     case 134 { $ext ="11"; }
     case 140 { $ext ="7susb9"; }
+    case 146 { $ext ="7sus#9"; }
+    case 163 { $ext ="7sus#5"; }
     case 177 { $ext ="4"; }
     case 184 { $ext ="sus"; }
     else { $ext ="?($_[0])"; &warning("CRITICAL: don't know extension '".$_[0]."'");}
@@ -242,155 +245,8 @@ sub getMMAgroove { # input: name of basic style nr.
 
 
 
-######################################
-##   
-sub getNoteDur { # needs MIDI duration plus tempoStyle  
-  $midiDur 	= shift; 
-  $timeNom 	= shift; 
-  $timeDenom	= shift;
-  my $isTrip = 0;
-  #print "getNoteDur $midiDur in $barDur, \n";
-  unless ($barDur) {$barDur = &getBarDur($timeNom,$timeDenom); }
-  #smallest note 1/32
-  #$midiDur = $barDur/32*&round( $midiDur /$barDur*32);
-  #if ($midiDur==0) {return "invalid";}
- 
-  
-  
-  $lg = log($barRefDur/$midiDur)/log(2);
 
-  $lgRest = $lg - int $lg; #Nachkommastellen
-  
 
-  #print "biabdefs:getNoteDur:". $lg. "+".$lgRest."\n";
-  if ($lgRest == 0) { $noteDur = 2**$lg; }
-  if (($lgRest > 0) and ($lgRest <= 0.2)) { $noteDur = 2**(int $lg + 1)."..";}  #double dotted 
-  if (($lgRest > 0.2) and ($lgRest <= 0.56)) { $noteDur = 2**(int $lg + 1).".";}  #dotted
-  if (($lgRest > 0.56) and ($lgRest <= 0.7)) { $noteDur = 2**(int $lg);}  #triplet (lilywrite should know this already)
-  if ($lgRest > 0.7) { $noteDur = "invalid";}  
-  	 
-  #print $noteDur."\n";	
-  return ($noteDur);    
-}
-
-sub getBarDur {
-  $nom=shift;
-  $denom=shift;
-
-  if (($nom == 3) and ($denom == 4)) { $barDur = 360; $barRefDur = 480; $smallestNote = $barRefDur/8;}
-  if (($nom == 4) and ($denom == 4)) { $barDur = 480; $barRefDur = 480; $smallestNote = $barRefDur/8;}
-  if (($nom == 6) and ($denom == 8)) { $barDur = 320; $barRefDur = 480; $smallestNote = $barRefDur/8;} #todo
-  
-  if ($aQuant) {$smallestNote = $barRefDur/$aQuant;}  #command line override
-  print "biabdefs: $nom/$denom , barDur=$barDur\n" if ($debug);
-  print "biabdefs: smallestNote = $smallestNote\n" if ($debug);
-  
-  # define forbidden single-note durations (they can't be written 
-  # as one note; like a quarter plus a 16th -> no possible notation) 
-  @forbiddenDurations = (600,540,510,495,300,270,255,150,135,75);
-  $forbiddenDurRegexp="[".join("|",@forbiddenDurations)."]";
-  
-  $durTrip2=$barRefDur/3;
-  $durTrip4=$barRefDur/6;
-  $durTrip8=$barRefDur/12;
-  $durTrip16=$barRefDur/24;
-  
-  
-  
-  return $barDur;
-}  
-
-sub quantize { 
-  #quantization to $smallestNote (note & rest need to be calculated together ???)
-  # only notes with single-note-printable durations may be returned for qDur!
-  my $dur = shift;
-  my $durToNext = shift;
-  my $inbarCount = shift;
-  my $isTrip = 0;
-  my $trackTrip = shift;
-  my $trackTripDur= shift;
-  $dur = $dur + $lastOffset;
-  $durToNext = $durToNext + $lastOffset;
-  $qDurToNext = $smallestNote* &round($durToNext/$smallestNote);
-  $qDur = $smallestNote* (int($dur/$smallestNote)+1);
-
-  #always finish triplets
- if (0) { #no triplet support for release 0.3 
- #if ($trackTrip > 0) { 
-   $qDur = $trackTripDur; 
-   $qDurToNext = $trackTripDur; 
-   $isTrip=1;
-   print "biabdefs: filling triplet!\n" if ($debug);
- #}
- #else {
-  if ($qDurToNext == 0) { $qDurToNext=$smallestNote; }
-  if ($qDur>$qDurToNext) { $qDur=$qDurToNext;}
-  if ($qDur == 0 ) { $qDur=$smallestNote; }
-
-  # respect triplets => this is heavy shit!
-  #$quantOffs=$qDur-$dur;
-  $quantOffs=$qDurToNext-$durToNext;  #test
-  $quantOffsToNext=$qDurToNext-$durToNext;
-  #check dur
-  if ( (abs($quantOffs)>abs($barRefDur/3-$dur)) and
-  	 ($nom==4) and ($inbarCount - $trackTrip*$durTrip2 % 240 == 0) )
-    			{ $qDur = $barRefDur/3; $isTrip=1; $trackTripDur=$barRefDur/3;
-			  $qDurToNext = $qDur; #just a quick hack!
-			} #1/2 triplet
-  elsif ( (abs($quantOffs)>abs($barRefDur/6-$dur)) and
-  	($inbarCount - $trackTrip*$durTrip4 % 120 == 0) )
-    			{ $qDur = $barRefDur/6; $isTrip=1; $trackTripDur=$barRefDur/6;
-			  $qDurToNext = $qDur; #just a quick hack!
-			} #1/4 triplet
-  elsif ( (abs($quantOffs)>abs($barRefDur/12-$dur)) and 
-  	($smallestNote >= $barRefDur/8) and
-	($inbarCount - $trackTrip*$durTrip8 % 60 == 0) )  
-    			{ $qDur = $barRefDur/12; $isTrip=1; $trackTripDur=$barRefDur/12;
-			  $qDurToNext = $qDur; #just a quick hack!
-			} #1/8 triplet
-  elsif ( (abs($quantOffs)>abs($barRefDur/24-$dur)) and 
-  	($smallestNote >= $barRefDur/16) and
-	($inbarCount - $trackTrip*$durTrip8 % 30 == 0) )
-    			{ $qDur = $barRefDur/24; $isTrip=1; $trackTripDur=$barRefDur/24;
-			  $qDurToNext = $qDur; #just a quick hack!
-			} #1/16 triplet
-  # check durToNext
-#  if ( (abs($quantOffs)>abs($barRefDur/3-$durToNext)) and
-#  	( (($nom==4) and ($inbarCount - $trackTrip*$durTrip2 % 240 == 0)) or
-#	  (($nom==3) and ($inbarCount - $trackTrip*$durTrip2 == 0))) )
-#    { $qDurToNext = $barRefDur/3; } #1/2 triplet
-#  elsif ( (abs($quantOffs)>abs($barRefDur/6-$durToNext)) and
-#  	($inbarCount - $trackTrip*$durTrip4 % 120 == 0) )
-#    { $qDurToNext = $barRefDur/6; } #1/4 triplet
-#  elsif ( (abs($quantOffs)>abs($barRefDur/12-$durToNext)) and 
-#  	($smallestNote >= $barRefDur/8) and
-#	($inbarCount - $trackTrip*$durTrip8 % 60 == 0) )  
-#    { $qDurToNext = $barRefDur/12; } #1/8 triplet
-#  elsif ( (abs($quantOffs)>abs($barRefDur/24-$durToNext)) and 
-#  	($smallestNote >= $barRefDur/16) and
-#	($inbarCount - $trackTrip*$durTrip8 % 30 == 0) )
-#    { $qDurToNext = $barRefDur/24; } #1/16 triplet
- }    
-    
-    
-  #if (abs($quantOffsToNext)>abs($barRefDur/3-$durToNext)) { $qDurToNext = $barRefDur/3; } #1/2 triplet
-  #elsif (abs($quantOffsToNext)>abs($barRefDur/6-$durToNext)) { $qDurToNext = $barRefDur/6; } #1/4 triplet
-  #elsif ((abs($quantOffsToNext)>abs($barRefDur/12-$durToNext)) and ($smallestNote >= $barRefDur/8)) { $qDurToNext = $barRefDur/12; } #1/8 triplet
-  #elsif ((abs($quantOffsToNext)>abs($barRefDur/24-$durToNext)) and ($smallestNote >= $barRefDur/16)){ $qDurToNext = $barRefDur/24; } #1/16 triplet
-  
-  ## check that qDur is single-note-printable
-  #if ($qDur =~ /^$forbiddenDurRegexp$/ ) {
-  #  print "biabdefs: correcting a forbidden duration\n";
-  #  $qDur = $qDur+&sgn($dur-$qDur)*$smallestNote;
-  #}
-  
-  #test
-  #if ($qDurToNext<$barDur/4) { $qDur=$qDurToNext;}
-  $lastOffset = $durToNext - $qDurToNext;
-  #print "biabdefs: quantize: dur=$dur/$durToNext => $qDur/$qDurToNext newOffset = $lastOffset\n";
-  return ($qDur, $qDurToNext, $isTrip,$trackTripDur);
-  
-}
 sub round {
   $number = shift;
   return int ($number + .5) * ($number <=> 0);
@@ -404,9 +260,6 @@ sub useWarnFileName {
   # this function is only needed to pass the value to this module. Other ways?
   $WARNfile = shift;
 }  
-sub overrideSmallestNote {
-  $aQuant = shift();
-}
 sub enableDebug {
   $debug=1;
 }  

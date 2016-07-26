@@ -21,12 +21,12 @@ package biabread;
 ##   provides a class to read band-in-a-box file formats
 ##
 # CVS:
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 #
 
 use Exporter;
 use Switch;
-
+use melodyNote;
 
 
 @ISA = ('Exporter');
@@ -42,53 +42,79 @@ $PRESTYe = join('',chr 66,chr 12); #most usual
 @STYarray=join('',chr 83,chr 84, chr 89);
 @FFDarray=join('',chr 0, chr 255, chr 0 , chr 13);
 @ABCarray=join('',chr 160, chr 176, chr 193); # A0 B0 C1
-$foundMelody=0;
-$foundChords=0;
-$foundLyrics=0;
+#$foundMelody=0;
+#$foundChords=0;
+#$foundLyrics=0;
 
 
 sub new {
-  my $this = shift();
-  my $BIABfile = shift();
-  $WARNfile = shift();
-  $debug=shift();
-  my $class= ref($this) || $this;
-  my $self = {};
+  my ($class, $BIABfile, $WARN, $deb) = @_;
+  $debug=$deb; #global!
+  $WARNfile=$WARN; #global!
+  #my $this = shift();
+  #my $BIABfile = shift();
+  #$WARNfile = shift();
+  #$debug=shift();
+  #my $styleMap = NULL;
+  #my $class= ref($this) || $this;
+  
+  my $self = {
+  	"BIABfile"	=> $BIABfile,
+	"WARNfile"	=> $WARNfile,
+	"title"		=> undef,
+	"styleFile"	=> undef,
+	"basicStyle"	=> undef,
+	"BPM"		=> undef,
+	"key"		=> undef,
+	"aChords"	=> undef,
+	"aStyleMap"	=> undef,
+	"aExts"		=> undef,
+	"aMelody"	=> undef,
+#	"aMelodyWhen"	=> (),
+#	"aMelodyChannel"=> (),
+#	"aMelodyMIDInum"=> (),
+#	"aMelodyVelocity"=> (),
+#	"aMeldoyDuration"=> (),
+	"foundChords"	=> 0,
+	"foundMelody"	=> 0,
+	"foundLyrics"	=> 0};
   bless $self, $class;
   print "biabread: born. file to read: $BIABfile \n" if ($debug);
-  &readBIABfile($BIABfile);
+  #&readBIABfile($BIABfile);
+  $this=$self;
+  &readBIABfile($this,$BIABfile);
   return $self;
  
 }
 
-sub title {$title;}
-sub styleFile {$styleFile;}
-sub basicStyle {$basicStyle;}
-sub BPM { $BPM; }
-sub key { $key; }
-sub aChords { @aChords; }
-sub aStyleMap { @styleMap; }
-sub aExts { @aExts; }
-sub aMelodyWhen { @aMelodyWhen; }
-sub aMelodyChannel { @aMelodyChannel; }
-sub aMelodyMIDInum { @aMelodyMIDInum; }
-sub aMelodyVelocity { @aMelodyVelocity; }
-sub aMelodyDuration { @aMelodyDuration; }
-sub foundChords { $foundChords; }
-sub foundMelody { $foundMelody; }
-sub foundLyrics { $foundLyrics; }
+sub title {my $this = shift();return $this->{title};}
+sub styleFile {my $this = shift();return $this->{styleFile};}
+sub basicStyle {my $this = shift();return $this->{basicStyle};}
+sub BPM { my $this = shift();return $this->{BPM}; }
+sub key {my $this = shift();return $this->{key}; }
+sub aChords { my $this = shift();$tmp=$this->{aChords};return @$tmp; }
+sub aStyleMap { my $this = shift();$tmp=$this->{aStyleMap}; return @$tmp; }
+sub aExts {my $this = shift();$tmp=$this->{aExts};return @$tmp; }
+sub aMelody { my $this = shift();$tmp= $this->{aMelody};return @$tmp; }
+#sub aMelodyWhen {my $this = shift();return @this->{aMelodyWhen}; }
+#sub aMelodyChannel {my $this = shift();return @this->{aMelodyChannel}; }
+#sub aMelodyMIDInum {my $this = shift();return @this->{aMelodyMIDInum}; }
+#sub aMelodyVelocity { my $this = shift();return @this->{aMelodyVelocity}; }
+#sub aMelodyDuration { my $this = shift();return @this->{aMelodyDuration}; }
+sub foundChords { my $this = shift();return $this->{foundChords}; }
+sub foundMelody { my $this = shift();return $this->{foundMelody}; }
+sub foundLyrics { my $this = shift();return $this->{foundLyrics}; }
 
 sub readBIABfile { #needs a filename
 ########################################################
 ## read biab file
-  #my $this = shift;
+  my $this = shift;
   my $BIABfile = shift;
   
   open(INFILE,"< $BIABfile") or 
                   die "Datei $BIABfile konnte nicht geoeffnet werden: $!\n";
 
   binmode INFILE;
-
   # discard first byte
   $bytesread = read(*INFILE, $byte, 1);
   # length of title
@@ -96,45 +122,56 @@ sub readBIABfile { #needs a filename
   $titleLen=ord $byte;
   print "biabread: title length: $titleLen \n" if ($debug);
   $bytesread = read(*INFILE, $bytes, $titleLen);
-  $title=$bytes;
-  print "biabread: title: ".$title."\n" if ($debug);
+  $this->{title}=$bytes;
+  print "biabread: title: ".$this->{title}."\n" if ($debug);
 
   #skip two bytes
   $bytesread = read(*INFILE, $bytes, 2);
 
   #read basic style
   $bytesread = read(*INFILE, $byte, 1);
-  $basicStyle = ord $byte;
-  print "biabread: basic style nr: $basicStyle \n" if ($debug);
+  $this->{basicStyle} = ord $byte;
+  print "biabread: basic style nr: ".$this->{basicStyle}." \n" if ($debug);
 
   #read Key
   $bytesread = read(*INFILE, $byte, 1);
-  $key = ord $byte;
+  $this->{key} = ord $byte;
   
-  print "biabread: keyNr: $key \n" if ($debug);
+  print "biabread: keyNr: ".$this->{key}." \n" if ($debug);
 
   #read BPM
   $bytesread = read(*INFILE, $byte, 1);
-  $BPM = ord $byte;
-  print "biabread: BPM: $BPM \n" if ($debug);
+  $this->{BPM} = ord $byte;
+  print "biabread: BPM: ".$this->{BPM}." \n" if ($debug);
 
   #read Style Map
   #$bytesread = read(*INFILE, $byte, 256);
   #print $byte;
   $i=0;
-  until($i==256) {
+  until($i>=256) {
     $bytesread = read(*INFILE, $byte, 1);
     if (ord $byte ==0) {
       $bytesread = read(*INFILE, $byte, 1);
+      
+      if (ord($byte)==0) {print "biabread: File (stylemap) has unknown format! no output\n"; 
+  		&warning("ERROR: biabread: File (stylemap) has unknown format! no output");
+		return;}
       $i = $i + ord $byte;
+      #print "add ".ord($byte)."\n";
     }
     else { 
       print "biabread: stylemap entry at $i: ".ord($byte)."\n" if ($debug); 
-      $styleMap[$i-1] = ord $byte; 
+      if ($i==0) {print "biabread: File (stylemap) has unknown format! no output\n"; 
+  		&warning("ERROR: biabread: File (stylemap) has unknown format! no output");
+		return;}
+      $this->{aStyleMap}[$i-1] = ord $byte; 
       $i++;
     } 
   }    
-  #print "biabread: StyleMap read \n" if ($debug);
+  if ($i>256) {print "biabread: File (stylemap) has unknown format! no output\n"; 
+  		&warning("ERROR: biabread: File (stylemap) has unknown format! no output");
+		return;}
+  print "biabread: StyleMap read \n" if ($debug);
 
   #read chord types
   $i=1;
@@ -145,7 +182,7 @@ sub readBIABfile { #needs a filename
       $i = $i + ord $byte;
     }
     else {
-      $aExts[$i]=ord $byte;
+      $this->{aExts}[$i]=ord $byte;
       $i++;
     }
   }
@@ -160,12 +197,12 @@ sub readBIABfile { #needs a filename
       $i = $i + ord $byte;
     }
     else {
-      $aChords[$i]=ord $byte;
+      $this->{aChords}[$i]=ord $byte;
       $i++;
     }
   }
   #print "biabread: chordNames read \n" if ($debug);
-  $foundChords = 1;
+  $this->{foundChords} = 1;
   
   #read number of bars used
   $bytesread = read(*INFILE, $byte, 1); #start bar
@@ -185,14 +222,14 @@ sub readBIABfile { #needs a filename
     ## style file names may only be 8 characters long 
     if (($byte =~ /$PRESTYa(.{1,8})\.STY/) || ($byte =~ /$PRESTYb(.{1,8})\.STY/) || ($byte =~ /$PRESTYc(.{1,8})\.STY/) || ($byte =~ /$PRESTYd(.{1,8})\.STY/) || ($byte =~ /$PRESTYe(.{1,8})\.STY/)) { #not sure if this always works => thats why I use the if
       #print "biabread: PRESTY found!\n" if ($debug);
-      $styleFile = $+;
+      $this->{styleFile} = $+;
     } 
     else {
       &warning("MINOR WARNING: presty not found. Style file name may be ugly");
-      $styleFile = join('',@preStyle[$#preStyle-9..$#preStyle-1]);
+      $this->{styleFile} = join('',@preStyle[$#preStyle-9..$#preStyle-1]);
     }  
-    print "biabread: Style File: ---$styleFile--- \n" if ($debug);
-  }  else { &warning("WARNING: 'STY' not found => using basic style"); $styleFile="unknown";}
+    print "biabread: Style File: ---".$this->{styleFile}."--- \n" if ($debug);
+  }  else { &warning("WARNING: 'STY' not found => using basic style"); $this->{styleFile}="unknown";}
   if ($byte =~ /@FFDarray/) {
       #print "biabread: anz Zeichen vor FFD: ".length($`)."\n" if ($debug);
       @rest=split('',$');
@@ -209,23 +246,23 @@ sub readBIABfile { #needs a filename
         @rest=split('',$');
 	$maxNotes=int length($')/12;
 	#print "biabread: anz Zeichen verbleibend:$maxNotes\n" if ($debug);
-	@melody = ();
+	#@this->{aMelody} = ();
         # hier beginnen die noten
         for($i=0; $i<$noteCount; $i++) {
 	  if ($i >= $maxNotes) { last; }
           $b=12*$i;
-          $aMelodyWhen[$i] = ord($rest[$b]) + 256 * ord($rest[$b+1])+ 256*256* ord($rest[$b+2]) + 256*256*256* ord($rest[$b+3]);
-          $aMelodyChannel[$i] = ord($rest[$b+4]);
-          $aMelodyMIDInum[$i] = ord($rest[$b+5]);
-          $aMelodyVelocity[$i] = ord($rest[$b+6]);
-          $aMelodyDuration[$i] = ord($rest[$b+8]) + 256* ord($rest[$b+9])	+ 256*256* ord($rest[$b+10]) + 256*256*256*ord($rest[$b+11]);
+          $onset = ord($rest[$b]) + 256 * ord($rest[$b+1])+ 256*256* ord($rest[$b+2]) + 256*256*256* ord($rest[$b+3]);
+          $channel = ord($rest[$b+4]);
+          $MIDIpitch = ord($rest[$b+5]);
+          $velocity = ord($rest[$b+6]);
+          $duration = ord($rest[$b+8]) + 256* ord($rest[$b+9])	+ 256*256* ord($rest[$b+10]) + 256*256*256*ord($rest[$b+11]);
           #print "Note: at $aMelodyWhen[$i] MIDInum $aMelodyMIDInum[$i]\n"
+	  $this->{aMelody}[$i]= new melodyNote($onset,$duration,$MIDIpitch,$velocity,$channel);
         }
-	$foundMelody = 1;
+	$this->{foundMelody} = 1;
   } else { &warning("WARNING: 'A0 B0 C1' not found => no melody");}
     
   close INFILE;
-
 }
 sub warning {
   open(WARN, ">>$WARNfile") or 
@@ -234,5 +271,6 @@ sub warning {
 
   close WARN;
 }  
+
 
 return 1;

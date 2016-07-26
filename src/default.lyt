@@ -1,0 +1,29 @@
+\version "<{TARGET_VERSION}>"
+
+\header {
+	title	= "<{TITLE}>"
+%	poet 	= ""
+%	composer= ""
+	tagline	= "Converted from Band in a Box file: <{BIAB_FILE_NAME}> with biabconverter V.<{BIAB_CONVERTER}>"
+}
+
+\paper {
+ indent = 0.0\cm
+ pagenumber = no
+}
+
+\score {
+  <<
+    \context ChordNames \chords { \override ChordName #'font-size = #6
+        <{CHORDS}>
+    }
+    \context Voice = "mel" {
+      \time <{TIME}>
+      \key <{KEY}> 
+      <{NOTES}>	
+    }	
+%   \lyricsto "mel" \new Lyrics { 
+%   <{LYRICS}>
+%   }
+  >>
+}

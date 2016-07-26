@@ -1,0 +1,106 @@
+\version "2.4.2"
+
+pieceTitle	= "<{TITLE}>"
+piecePoet	= ""
+pieceComposer	= ""
+
+melody    = { 
+  \time <{TIME}>
+  \key <{KEY}> 
+  <{NOTES}> 
+}
+harmonies = \chordmode { 
+  <{CHORDS}>	
+}
+
+\header {
+  tagline	= "Converted from Band in a Box file: <{BIAB_FILE_NAME}> with biabconverter V.<{BIAB_CONVERTER}>"
+} 
+
+\paper {
+ indent = 0.0\cm
+ raggedbottom = ##t
+ printpagenumber = ##f
+ scoreTitleMarkup = \markup { \column {
+   \bookTitleMarkup 
+   \fill-line {
+      \bigger \bold
+      \fromproperty #'header:piece
+    }
+   }
+  }
+}
+
+\book {
+  \score {
+    <<
+      \context ChordNames \chords { \override ChordName #'font-size = #6
+          \harmonies
+      }
+      \context Voice = "mel" {
+	\melody
+      }	
+    >>
+    \header { 
+      title	   = #pieceTitle
+      poet 	   = #piecePoet
+      composer	   = #pieceComposer
+      raggedbottom = ##t
+    }
+  }
+  \score {
+    \transpose bes c' <<
+      \context ChordNames \chords { \override ChordName #'font-size = #6
+          \harmonies
+      }
+      \context Voice = "mel" {
+	\melody
+      }	
+    >>
+    \header {
+      title	   = #pieceTitle
+      poet 	   = #piecePoet
+      composer     = #pieceComposer
+      raggedbottom = ##t
+      breakbefore  = ##t
+      piece        = \markup { "B" \flat }
+    }
+  }
+  \score {
+    \transpose ees c' <<
+      \context ChordNames \chords { \override ChordName #'font-size = #6
+          \harmonies
+      }
+      \context Voice = "mel" {
+	\melody
+      }	
+    >>
+    \header {
+      title	   = #pieceTitle
+      poet 	   = #piecePoet
+      composer     = #pieceComposer
+      raggedbottom = ##t
+      breakbefore  = ##t
+      piece        = \markup { "E" \flat }
+    }
+  }
+  \score {
+    \transpose c' c <<
+      \context ChordNames \chords { \override ChordName #'font-size = #6
+          \harmonies
+      }
+      \context Voice = "mel" {
+	\clef bass
+	\melody
+      }	
+    >>
+    \header { 
+	title	     = #pieceTitle
+	poet 	     = #piecePoet
+	composer     = #pieceComposer
+	raggedbottom = ##t
+	breakbefore  = ##t
+	piece        = "Bass"
+    }
+  }
+}

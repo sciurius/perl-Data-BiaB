@@ -1,0 +1,46 @@
+BUG
+1970s/glitter.sga: seems to have melody without notes. caused trouble in lilywrite, 
+FIXED
+
+BUG
+1970s/mamadont.mgu: locked loop in biabread 
+biabread: stylemap entry at 374: 7
+biabread: stylemap entry at 375: 32
+=> biabread: until($i>=256) instead of ==
+FIXED
+
+BUG
+/1970s/mamadont.sga: locked loop in biabread
+Introduced a check for corrupted stylemaps
+FIXED
+
+BUG 
+/1970s/cls2you.sg2: biabdefs: CRITICAL: don't know extension '100'
+close-to-you.mma
+leads to another bug: I think, when batch processing, not all values are reset in biabconv
+for now I introduced "my $styleMap" but it might affect other variables as well
+solved by modifying biabread object to include all data per object
+
+BUG
+/home/public/data/BandInABox/newrealbook/AS TIME GOES BY .MG1
+causes locked loop
+firstOnset:4294949239
+Melody begins after 8947808 Measures and 439 
+
+kind of solved the problem with  
+if ($firstOnset>99999) {print "lilywrite: there seems to e a problem with the melody!\n"; 
+  		&warning("CRITICAL: lilywrite: there seems to e a problem with the melody!");
+		$hasMelody=0;}
+FIXED
+
+BUG
+ /home/public/data/BandInABox/LRsongs/countryr.mgu
+causes locked loop because  
+lilyWrite: level would run too deep! returning with next note
+=>didn't check, if last note was processed already!
+fixed with:
+    if ($lastNoteProcessed) {
+    	#fake note
+    	$note = new melodyNote(	$note->onset,$unitDur[$level],0, 0, $note->channel, 1, $diff); #is a rest
+	return &newNotationUnit($level,$note);} 
+FIXED

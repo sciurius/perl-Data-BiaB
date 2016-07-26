@@ -1,10 +1,10 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl 
 ###################################################################
 #
 #         Band-In-A-Box File Converter
 #           ----------------------------
 #             Alain Brenzikofer 
-#               brenzi@student.ethz.ch
+#               biabconverter@brenzi.ch
 #     
 # 	a quick hack to parse Band in a box files.
 # 	based on the Delphi coded "BIABTools" of Alf Warnock
@@ -23,12 +23,48 @@
 ##  Please read README for instructions
 ##
 #####################################################################
+#
 
-$version="0.4";
+
+
+$version="0.6.4";
 
 # CVS:
-# $Revision: 1.4 $
+# $Revision: 1.15 $
 # $Log: biabconverter,v $
+# Revision 1.15  2005/03/05 14:04:14  brenzala
+# release cosmetics 0.6.2
+#
+# Revision 1.14  2005/03/05 13:57:57  brenzala
+# release cosmetics
+#
+# Revision 1.13  2005/03/05 13:54:50  brenzala
+# Matthias' Watermelon_Hang-bug fixed and included his homedir patch
+#
+# Revision 1.12  2005/02/17 19:52:16  brenzala
+# revision revised
+#
+# Revision 1.11  2005/02/17 19:51:30  brenzala
+# bugfix 'WatermelonMan'
+#
+# Revision 1.10  2005/02/12 18:25:13  brenzala
+# Matthias' template support integrated
+#
+# Revision 1.9  2005/01/13 23:02:28  brenzala
+# new batch processing, more chord extensions
+#
+# Revision 1.8  2005/01/09 13:59:38  brenzala
+# update
+#
+# Revision 1.7  2005/01/07 00:28:32  brenzala
+# quantization works for round-midnight and que sera...thanks to a new commandline arg -qtrip
+#
+# Revision 1.6  2005/01/02 17:59:25  brenzala
+# yet a better structure. triplets work +-, there are too many though
+#
+# Revision 1.5  2004/12/31 12:16:09  brenzala
+# completly new, recursive lilyWrite structure
+#
 # Revision 1.4  2004/12/18 23:07:21  brenzala
 # reading styleMap, no substyle changes for mma yet, cutting empty measures at the end for mma
 #
@@ -43,10 +79,9 @@ $version="0.4";
 #
 
 # todo:
-# -commandline arguments
+# -find a way to get convert-ly working when version stays the same (causing empty files now)
 # -test jigs 6/8 12/8
-# -quantization vs. triplets?
-# -more chord definitions for lilypond in lilydefs.pm
+# -improve quantization
 #
 ####################################################################
 
@@ -67,9 +102,18 @@ use lilydefs;
 use mmawrite;
 use lilywrite;
 use Switch;
+use File::Find;
+use File::Spec;
+@lilyPath = split(':', $ENV{BIABCONVERTER_TEMPLATES} || "");
+ unless ($0 =~ /cvs/) { 
+   push(@lilyPath, "$ENV{HOME}/.biabconverter/templates");
+   push(@lilyPath, "$FindBin::Bin/../share/biabconverter/templates");
+ }
+$lilyTmpl = "default.lyt";
 
 $WARNfile="biabconverter.warnings";
 $LISTfile="biabconverter.list";
+$BIABfileName='';
 ########################### get arguments #############
 	$outputDir='';
 	while ($#ARGV >= 0) {
@@ -80,6 +124,10 @@ $LISTfile="biabconverter.list";
 	   	$outputDir=shift(); 
 		#print "<<ARG>>output dir: $outputDir\n"; 
 	   }
+	   elsif ($argument =~ /^-batch$/i) {
+	   	$inputDir=shift(); 
+		print "<<ARG>>batch input dir: $inputDir\n"; 
+	   }
 	   elsif ($argument =~ /^-time$/i) {
 	   	$timeArg = shift();
 		$timeArg =~ /(\d*)\/(\d*)/;
@@ -88,14 +136,21 @@ $LISTfile="biabconverter.list";
 		#print "--$timeArg-- --$aTimeNom-- / --$aTimeDenom--\n";
 	   }
 	   elsif ($argument =~ /^-quant$/i) {
-	   	&biabdefs::overrideSmallestNote(shift());
+	   	&lilydefs::overrideSmallestNote(shift());
+	   }
+	   elsif ($argument =~ /^-qtrip$/i) {
+	   	&lilydefs::overrideSmallestTriplet(shift());
 	   }
 	   elsif ($argument =~ /^-debug$/i) {
 	   	$debug=1;
 		&biabdefs::enableDebug;
 	   }
-	   
-	   else {$BIABfile = $argument;}
+	   elsif ($argument =~ /^-lilyTemplate$/i) {
+ 	     $lilyTmpl=shift();
+ 	     $lilyTmpl .= ".lyt" unless $lilyTmpl =~ /\.lyt$/;
+ 	   }
+
+	   else {$BIABfileName = $argument;}
 	   #if ((!$upload)&&(!$download)) {&usage;}
 	}
 	#unshift(@ARGV,@files);
@@ -110,17 +165,40 @@ $LISTfile="biabconverter.list";
 
 
 #if ($ARGV[0] eq '') { &usage; }
-if ($BIABfile eq '') { &usage; }
+if (($BIABfileName eq '') and !(defined $inputDir)) { &usage; }
 print "This is biabconverter $version\n";
 
 #$BIABfile = $ARGV[0];
 #$MMAfile = $BIABfile; $MMAfile =~ s/\..*/\.mma/;
 #$LILYfile = $BIABfile; $LILYfile =~ s/\..*/\.ly/;
 
+  #batch processing
+if (defined $inputDir) {
+  find({wanted =>\&convertFile, no_chdir => 1}, "$inputDir");
+}
+  #single file
+else { &convertFile($BIABfileName);}
+exit;
+#####################################################################################
+## main routine
+#####################################################################################
+
+sub convertFile{
+
+my $file=shift();
+unless (defined $file) {$file=$_;}
+unless ($file =~ /.*\..g./i) { 
+  print $file." doesn't have a BIAB extension\n"; 
+  &warning("#### $file doesn't have a BIAB extension, skipping\n");
+  return;
+}
+$BIABfile=$file;
 &warning("#### warnings for $BIABfile");
 &biabdefs::useWarnFileName($WARNfile);
 # read the biab file
 $biab = new biabread($BIABfile,$WARNfile,$debug);
+
+if ($biab->foundChords==0) {return;}
 
 #determine file names
 $biabName=$BIABfile;
@@ -132,7 +210,8 @@ $outName =~ s/[\ |\W]+/-/g; #replace all spaces and non-alphanumerics by "-"
 #$outName =~ s/-(?![^\Z])//g; #remove possible "-" at the end
 $outName =~ s/-*$//g;#remove possible "-" at the end
 $outName =~ s/([^\W0-9_])/\l$1/g; #lowercase
-$outName = $outName."_".$biabName;
+#$outName = $outName."_".$biabName;
+
 #$outName =~ s/\W//g;
 $mmaName = $outputDir.$outName.".mma";
 $lilyName = $outputDir.$outName.".ly";
@@ -174,15 +253,28 @@ $mma->writeMMA;
 unless ($mmaOnly) {
 ######################
 # create LilyWriter
+if ($lilyTmpl !~ m|^\.{,2}/|) {
+   #
+   # Template is not specified by absolute path: Perform path search
+   #
+   for my $path (@lilyPath) {
+     my($t) = File::Spec->catfile($path, $lilyTmpl);
+     if (-r $t) {
+       $lilyTmpl = $t;
+       last;
+     }
+   }
+}
+die "Can't find lilypond template `$lilyTmpl`." unless -r $lilyTmpl;
 
-
-$lily = new lilywrite($lilyName, $WARNfile, $biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $lilyKey, $MajMin, $mmaStyle, $timeNom, $timeDenom, $version, $debug);
+$lily = new lilywrite($lilyName, $WARNfile, $biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $lilyKey, $MajMin, $mmaStyle, $timeNom, $timeDenom, $version, $lilyTmpl, $biab->foundMelody, $debug);
 $lily->putChordNames(@lilyChords);
 $lily->putChordDurs(@lilyChordDurs);
-$lily->putMelodyWhen($biab->aMelodyWhen);
-$lily->putMelodyMIDInum($biab->aMelodyMIDInum);
-$lily->putMelodyDuration($biab->aMelodyDuration);
-
+#$lily->putMelodyWhen($biab->aMelodyWhen);
+#$lily->putMelodyMIDInum($biab->aMelodyMIDInum);
+#$lily->putMelodyDuration($biab->aMelodyDuration);
+#$lily->putMelodyChannel($biab->aMelodyChannel);
+$lily->putMelody($biab->aMelody);
 $lily->writeLily;
 } 
 # write song database entry
@@ -203,7 +295,8 @@ $niceTitle =~ s/\ {2,}//g; #remove multiple spaces
 		$BIABfile,);
 &databaseWrite(join(",\t",@listEntry));
 
-exit;
+
+}
 #########################################
 
 
@@ -252,7 +345,10 @@ sub getChordNames {
       #print "getChordNames: /\n";
       $mmaChords[$i] = "/";
       $pos = $#lilyChordRoots;
-      unless ($pos < 0) { $lilyChordDurs[$#lilyChordDurs]++; }
+      unless ($pos < 0) { 
+ 	$lilyChordDurs[$#lilyChordDurs]++;
+	
+      }
     }
   } 
   #print "getChordNames: mmaChords contains @mmaChords elements\n"; 
@@ -266,6 +362,9 @@ sub getChordNames {
    
      # get lily representation for duration
    $dur = $lilyChordDurs[$i];
+     # in 3/4 the durations are 4 per bar as well, but must be 3
+   if ($timeNom==3) {$dur =$dur - int($dur/4);}
+   
    if ($dur > 4 ) {
 	$durStr = "1*$dur/4";
    } else {
@@ -316,14 +415,24 @@ Purpose: Convert Band in a Box files to MMA and Lilypond formats
 Options:
 	-dir <directory>
 		specify an output directory
+	-batch <directory>
+		batch process all biab files in a directory 
+		recursively.
 	-time <X/Y>
 		override time guessed from biab file. 
 		May be 3/4, 4/4 (or 12/8...to be tested)	
 	-quant <..>
 		set smallest note for quantization. Enter
 		denominator only (1/16 would be '-quant 16'
+	-qtrip <..>
+		set smallest triplet. Enter 8 for 8th triplets.
+		If you don't need triplets you can turn them off 
+		by setting -qtrip 0	
 	-lily
 		write Lilypond file only
+	-lilyTemplate
+		choose a template for lily (.lyt file must be 
+		located in ~/.biabconverter/templates)
 	-mma
 		write MMA file only	
 	-debug

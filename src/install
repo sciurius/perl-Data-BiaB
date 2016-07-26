@@ -3,6 +3,8 @@
 # access it easily 
 #
 mkdir /usr/share/biabconverter
+mkdir /usr/share/biabconverter/templates
 cp *.pm /usr/share/biabconverter
-cp biabconverter.pl /usr/share/biabconverter
-ln -s /usr/share/biabconverter/biabconverter.pl /usr/bin/biabconverter
+cp biabconverter /usr/share/biabconverter
+mv /usr/share/biabconverter/*.lyt /usr/share/biabconverter/templates
+ln -s /usr/share/biabconverter/biabconverter /usr/bin/biabconverter

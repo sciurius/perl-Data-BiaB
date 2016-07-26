@@ -1,16 +1,14 @@
 -------------------------------------------------------------------
 
-         Band-In-A-Box File Converter 0.4
+         Band-In-A-Box File Converter 0.6.4
            ----------------------------
              Alain Brenzikofer 
-               brenzi@student.ethz.ch
+               biabconverter@brenzi.ch
 
 -------------------------------------------------------------------     
 
- 	a quick hack to parse Band in a box files.
+ 	this is a script to parse Band in a box files.
  	based on the Delphi coded "BIABTools" of Alf Warnock
-	
-	It doesn't work with all files yet!!!!!!
 
 	License: GPL
 
@@ -21,9 +19,33 @@
 --------------------------------------------------------------------
 	
 biabconverter is able to convert most biab files, but most converted 
-files will need some manual editing. Don't expect too much from this
-early version!
+files will need some manual editing. 
 
+NEWS in version 0.6.4
+----------------------
+-bugfix for mMaj7 chord in Lilypond
+-new template band.lyt to allow to have sheets for different Instruments 
+ in one PDF (only for lilypond >=2.6).
+-no automatic usage of "convert-ly" anymore.
+
+NEWS in version 0.6.2
+----------------------
+-bugfixes
+-Lily Templates may be placed in ~/.biabconverter/templates
+
+NEWS in version 0.6
+--------------------
+-simplified batch processing by cmdline arg -batch <dir> to process all 
+ biab files in the given directory recursively
+-biabconverter uses a template file for lilypond output now which may be 
+ customized by the user. (thanks Matthias!)
+-buggy install script fixed
+
+NEWS in version 0.5
+--------------------
+-quantization completely rewritten and quite stable. not completely bug-free
+ play around with -quant and -qtrip cmdline parameters if unhappy with 
+ the result
   
 NEWS in version 0.4
 --------------------
@@ -55,18 +77,16 @@ It's still better to quantize in BiaB!
 
 KNOWN BUGS:
 -----------
--triplets are not properly handled by lilywrite.pm neither by quantization
 -lilypond 2.2.6 doesn't display accidentials  (=> just remove hidden 
  notes at the end of the .ly file! This will break the 
  4-equal-width-bars-per-line rule.
 -only 4/4 and 3/4 are known to work yet.  
--quantization only works properly in simple cases => You should quantize 
- already in biab before converting for now
 
 THANKS to:
 ----------
 Alf Warnock for reverse-engineering the BiaB file format 
   and for sharing his knowledge with me.
 Matthias Neeracher for testing, improving and setting up 
-  Mac fink packages 
+  Mac fink packages.
+  Matthias has added lilypond template functionality 
 
