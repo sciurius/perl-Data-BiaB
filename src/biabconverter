@@ -1,0 +1,282 @@
+#!/usr/bin/perl -w
+###################################################################
+#
+#         Band-In-A-Box File Converter
+#           ----------------------------
+#             Alain Brenzikofer 
+#               brenzi@student.ethz.ch
+#     
+# 	a quick hack to parse Band in a box files.
+# 	based on the Delphi coded "BIABTools" of Alf Warnock
+#	It doesn't work with all files yet!!!!!!
+#
+#	License: GPL
+#
+# 	all user-customizeable values are located in 
+# 	biabdefs.pm, lilydefs.pm and mmadefs.pm
+# 	they are still incomplete! Please submit any new findings! 
+# 
+#####################################################################
+##
+##  This is the main file and the only executable.	
+## 	usage: ./biabconverter.pl <file.*g*>
+##  Please read README for instructions
+##
+#####################################################################
+
+$version="0.2.2";
+
+# CVS:
+# $Revision: 1.2 $
+# $Log: biabconverter,v $
+# Revision 1.2  2004/12/09 23:27:44  brenzala
+# triplets support hack (very bad hack!)
+# other fixes. quantization is quite good, as long as there are no
+# triplets.
+#
+#
+
+# todo:
+# -commandline arguments
+# -test jigs 6/8 12/8
+# -quantization vs. triplets?
+# -more chord definitions for lilypond in lilydefs.pm
+#
+####################################################################
+
+
+
+use FindBin;
+#only used for developing versions
+BEGIN {
+  unless ($0 =~ /cvs/) { 
+    #use lib "$FindBin::Bin/../share/biabconverter"; 
+    push(@INC,"$FindBin::Bin/../share/biabconverter");
+  }
+}
+
+use biabread;
+use biabdefs;
+use lilydefs;
+use mmawrite;
+use lilywrite;
+use Switch;
+
+$WARNfile="biabconverter.warnings";
+$LISTfile="biabconverter.list";
+########################### get arguments #############
+	$outputDir='';
+	while ($#ARGV >= 0) {
+	   $argument=shift;
+	   if ($argument =~ /^-mma$/) {$mmaOnly=1;}
+	   elsif ($argument =~ /^-lily$/) {$lilyOnly=1;}
+	   elsif ($argument =~ /^(-dir)$/) {
+	   	$outputDir=shift(); 
+		#print "<<ARG>>output dir: $outputDir\n"; 
+	   }
+	   else {$BIABfile = $argument;}
+	   #if ((!$upload)&&(!$download)) {&usage;}
+	}
+	unshift(@ARGV,@files);
+	#fix output directory string
+	unless ($outputDir eq '') { 
+  	  $outputDir =~ s/\/$//;	
+	  $outputDir = $outputDir."/";
+	  $WARNfile=$outputDir.$WARNfile;
+	  $LISTfile=$outputDir.$LISTfile;
+  	}
+
+
+#if ($ARGV[0] eq '') { &usage; }
+if ($BIABfile eq '') { &usage; }
+#$BIABfile = $ARGV[0];
+#$MMAfile = $BIABfile; $MMAfile =~ s/\..*/\.mma/;
+#$LILYfile = $BIABfile; $LILYfile =~ s/\..*/\.ly/;
+
+&warning("#### warnings for $BIABfile");
+&biabdefs::useWarnFileName($WARNfile);
+# read the biab file
+$biab = new biabread($BIABfile,$WARNfile);
+
+#determine file names
+$biabName=$BIABfile;
+$biabName=~ /([^\/]*)\..*/;
+$biabName = $1;
+
+$outName=$biab->title;
+$outName =~ s/[\ |\W]+/-/g; #replace all spaces and non-alphanumerics by "-"
+$outName =~ s/-(?![^\Z])//g; #remove possible "-" at the end
+$outName =~ s/([^\W0-9_])/\l$1/g; #lowercase
+$outName = $outName."_".$biabName;
+#$outName =~ s/\W//g;
+$mmaName = $outputDir.$outName.".mma";
+$lilyName = $outputDir.$outName.".ly";
+
+&warning("INFO: new file name: $mmaName");
+
+# find style substitute for mma and time character ( 3/4, 4/4....)
+($mmaStyle, $timeNom, $timeDenom) = getMMAgroove($biab->basicStyle, $biab->styleFile);
+
+# translate chords
+&getChordNames;
+
+# key and major/minor
+$songKey = getKey($biab->key);
+@tmp = &getLilyKey($songKey);
+$lilyKey = $tmp[0];
+$MajMin = $tmp[1];
+
+print "biabconverter: songKey: $songKey : Key $lilyKey $MajMin\n";
+#$songTime = $REEL; #test
+
+#######################
+# create an mmaWriter
+$mma = new mmawrite($mmaName,$biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $songKey, $mmaStyle, $timeNom, $timeDenom, $version);
+
+#and pass them to mmawrite
+$mma->putChordNames(@mmaChords);
+
+#write the mma file
+$mma->writeMMA;
+
+######################
+# create LilyWriter
+
+
+$lily = new lilywrite($lilyName, $WARNfile, $biab->title, $BIABfile, $biab->styleFile, $biab->BPM, $lilyKey, $MajMin, $mmaStyle, $timeNom, $timeDenom, $version);
+$lily->putChordNames(@lilyChords);
+$lily->putChordDurs(@lilyChordDurs);
+$lily->putMelodyWhen($biab->aMelodyWhen);
+$lily->putMelodyMIDInum($biab->aMelodyMIDInum);
+$lily->putMelodyDuration($biab->aMelodyDuration);
+
+$lily->writeLily;
+ 
+# write song database entry
+$niceTitle = $biab->title;
+$niceTitle =~ s/\ {2,}//g; #remove multiple spaces
+@listEntry = (	$niceTitle,
+		$biab->foundChords,
+		$biab->foundMelody,
+		$biab->foundLyrics,
+		$biab->BPM,
+		$songKey,
+		$MajMin,
+		$biab->basicStyle,
+		$biab->styleFile,
+		$mmaStyle,
+		$timeNom."/".$timeDenom,
+		$version,
+		$BIABfile,);
+&databaseWrite(join(",\t",@listEntry));
+
+exit;
+#########################################
+
+
+#########################################################################
+#
+# translate biab numbers to mma- and lily-compatible chords
+#
+sub getChordNames {
+  @mmaChords = ();	#chords in mma syntax
+  @lilyChordRoots = ();#chords in lily syntax
+  @lilyChordDurs = ();
+  @lilyChordExts = ();
+  @lilyChords = ();
+  print "getChordNames: ".$biab->aChords."\n";
+  for($i=0; $i<$biab->aChords-1; $i++) {
+    if ( ($biab->aChords)[$i] ) {
+     $mmaRoot = &biabdefs::getChordRootClean(($biab->aChords)[$i]);#s/([^\W0-9_])/\l$1/g;    
+     $lilyRoot = &lilydefs::getLilyNoteFromMMA($mmaRoot);
+     $mmaExt = &biabdefs::getChordExt(($biab->aExts)[$i]);
+     #print "main: $mmaExt\n";
+     $lilyExt = &lilydefs::getLilyExt($mmaExt); # todo
+     #print "getChordNames: $mmaRoot $mmaExt\n";
+     # slash chords need special treatment: chord extension has to be before the slash
+     $mmaChord = $mmaRoot;
+     if ($mmaChord =~ /\//) { 
+     	$mmaChord =~ s/\//$mmaExt\//;
+     }
+     else {
+       	$mmaChord = $mmaChord.$mmaExt; 
+     }
+     $mmaChords[$i] = $mmaChord;
+     $pos = $#lilyChordRoots + 1;
+     $lilyChordRoots[$pos] = $lilyRoot;
+     $lilyChordExts[$pos] = $lilyExt;
+     $lilyChordDurs[$pos] = 1; # one quarter now
+       
+    }
+    else { 
+      #print "getChordNames: /\n";
+      $mmaChords[$i] = "/";
+      $pos = $#lilyChordRoots;
+      unless ($pos < 0) { $lilyChordDurs[$#lilyChordDurs]++; }
+    }
+  } 
+  #print "getChordNames: mmaChords contains @mmaChords elements\n"; 
+  
+  # now that we know chord durations, we can write Lily Chords
+
+  @lilyDurs = ( 'dummy', '4','2','2.','1'); # for Lily note length
+  
+  for ($i=0; $i < @lilyChordRoots; $i++) {
+   $chord = $lilyChordRoots[$i];
+   
+     # get lily representation for duration
+   $dur = $lilyChordDurs[$i];
+   if ($dur > 4 ) {
+	$durStr = "1*$dur/4";
+   } else {
+	$durStr = $lilyDurs[$dur];
+   }		
+     # check slash chords
+   if ($lilyChordRoots[$i] =~ /\//) { 
+ 	$chord =~ s/\//$durStr:$lilyChordExts[$i]\//;
+   }
+   else {
+     	$chord = $chord.$durStr.":".$lilyChordExts[$i]; 
+   }
+   $lilyChords[$i] = $chord;
+  }
+
+}
+sub warning {
+  open(WARN, ">>$WARNfile") or 
+                  die " error: $WARNfile : $!\n";
+  print WARN "main: ".shift()."\n";
+
+  close WARN;
+}  
+sub databaseWrite {
+  open(LIST, ">>$LISTfile") or 
+                  die " error: biabconverter.list : $!\n";
+  print LIST shift()."\n";
+
+  close LIST;
+}  
+
+sub round {
+  $number = shift;
+  return int ($number + .5) * ($number <=> 0);
+}  
+
+sub usage
+{
+
+print STDERR <<EOF;
+This is 'biabconverter $version'
+by Alain Brenzikofer
+
+Syntax:  biabconverter(.pl) <biabfile>  
+
+Purpose: Convert Band in a Box files to MMA and Lilypond formats
+
+Details: no command line options yet.
+
+EOF
+exit 1;
+}
+
+

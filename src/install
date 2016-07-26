@@ -1,0 +1,8 @@
+#
+# you don't need to install biabconverter, but you might want to to 
+# access it easily 
+#
+mkdir /usr/share/biabconverter
+cp *.pm /usr/share/biabconverter
+cp biabconverter.pl /usr/share/biabconverter
+ln -s /usr/share/biabconverter/biabconverter.pl /usr/bin/biabconverter
