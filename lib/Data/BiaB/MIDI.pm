@@ -313,7 +313,7 @@ Johan Vromans, C<< <JV at CPAN dot org> >>
 
 =head1 BUGS AND SUPPORT
 
-See L<Data::Biab>.
+See L<Data::BiaB>.
 
 =head1 COPYRIGHT & LICENSE
 
