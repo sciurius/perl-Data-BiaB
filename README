@@ -1,41 +1,33 @@
 Data-BiaB
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+This module provides methods to read Band-in-a-Box data files and extract
+some useful information from them.
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+Band-in-a-Box is an excellent tool for creating professional music and
+accompanying tracks. I've been using it for many years but had to abandon
+it when I phased out Microsoft Windows PCs.
 
+Example:
 
-INSTALLATION
+    use Data::BiaB;
 
-To install this module, run the following commands:
+    # Load an existing song.
+    my $biab = Data::BiaB->new();
+    $biab->load("Vaya_Con_Dios.mgu");
 
-	perl Makefile.PL
-	make
-	make test
-	make install
+    # This will show what was gathered.
+    use Data::Dumper;
+    print Dumper($biab);
 
-SUPPORT AND DOCUMENTATION
+An associated Data::BiaB::MIDI module is capable of generating a MIDI
+file from the parsed data.
 
-After installing, you can find documentation for this module with the
-perldoc command.
+NOTE: Many BiaB files fail loading and parsing. If you have a recent
+version of Band-in-a-Box its MusicXML export feature will be a much
+better alternative.
 
-    perldoc Data::BiaB
-
-You can also look for information at:
-
-    RT, CPAN's request tracker
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Data-BiaB
-
-    Search CPAN
-        http://search.cpan.org/dist/Data-BiaB
-
+This is a hobby project. It is pre-alpha, under development, works for me,
+caveat emptor and so on. Have fun!
 
 COPYRIGHT AND LICENCE
 

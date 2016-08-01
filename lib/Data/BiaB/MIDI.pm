@@ -2,28 +2,39 @@
 
 package Data::BiaB::MIDI;
 
+BEGIN {
+our $VERSION = '0.10';
+}
+
+use Data::BiaB $VERSION;
+
 =head1 NAME
 
 Data::BiaB::MIDI - MIDI generator for Data::BiaB
 
-=cut
-
-
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This module provides MIDI generation for Data::BiaB.
 
-Perhaps a little code snippet.
+Example:
 
     use Data::BiaB;
+    use Data::BiaB::MIDI;
 
-    my $foo = Data::BiaB->new();
-    ...
+    # Load an existing song.
+    my $biab = Data::BiaB->new();
+    $biab->load("Vaya_Con_Dios.mgu");
 
+    # Create MIDI.
+    $biab->makemidi("Vaya_Con_Dios.midi");
+
+For convenience, you can run the module from the command line:
+
+  perl lib/Data/BiaB/MIDI.pm Vaya_Con_Dios.mgu
+
+This will produce a MIDI file named C<__new__.midi>.
 
 =cut
-
-our $VERSION = '0.01';
 
 package Data::BiaB;
 
@@ -291,20 +302,9 @@ package main;
 
 unless ( caller ) {
     use Data::BiaB;
-    use Data::Dumper;
     my $b = Data::BiaB->new( debug => 1 )->load (shift )->parse;
     $b->makechords;
     $b->makemidi;
-
-    if ( 1 ) {
-	for ( qw( _raw stylemap ctypes cnames  ) ) {
-	    delete $b->{$_};
-	}
-	$b->{melody} =
-	  [ map { $_->[2] = Data::BiaB::pitchname($_->[2]); $_ }
-	    @{$b->{melody}} ];
-	warn(Dumper($b));
-    }
 }
 
 =head1 AUTHOR

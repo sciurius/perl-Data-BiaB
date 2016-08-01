@@ -2,6 +2,46 @@
 
 package Data::BiaB;
 
+=head1 NAME
+
+Data::BiaB - Analyze Band-in-a-Box data files
+
+=cut
+
+our $VERSION = '0.10';
+
+=head1 SYNOPSIS
+
+This module provides methods to read Band-in-a-Box data files and
+extract some useful information from them.
+
+Band-in-a-Box is an excellent tool for creating professional music and
+accompanying tracks. I've been using it for many years but had to
+abandon it when I phased out Microsoft Windows PCs.
+
+Example:
+
+    use Data::BiaB;
+
+    # Load an existing song.
+    my $biab = Data::BiaB->new();
+    $biab->load("Vaya_Con_Dios.mgu");
+
+    # This will show what was gathered.
+    use Data::Dumper;
+    print Dumper($biab);
+
+=head1 NOTE
+
+Many BiaB files fail loading and parsing. If you have a recent version
+of Band-in-a-Box its MusicXML export feature will be a much better
+alternative.
+
+This is a hobby project. It is pre-alpha, under development, works for
+me, caveat emptor and so on. Have fun!
+
+=cut
+
 use warnings;
 use strict;
 use Carp qw( carp croak );
@@ -363,61 +403,15 @@ sub makechords {
     $self->{chords} = \@c;
 }
 
-=head1 NAME
-
-Data::BiaB - The great new Data::BiaB!
-
-=cut
-
-our $VERSION = '0.01';
-
-
-=head1 SYNOPSIS
-
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
-    use Data::BiaB;
-
-    my $foo = Data::BiaB->new();
-    ...
-
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
-
-=head1 FUNCTIONS
-
-=head2 function1
-
-=cut
-
-sub function1 {
-}
-
-=head2 function2
-
-=cut
-
-sub function2 {
-}
-
-
 =head1 AUTHOR
 
 Johan Vromans, C<< <JV at CPAN dot org> >>
-
 
 =head1 BUGS
 
 Please report any bugs or feature requests to C<bug-data-biab at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Data-BiaB>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
 
 =head1 SUPPORT
 
@@ -439,9 +433,13 @@ L<http://search.cpan.org/dist/Data-BiaB>
 
 =back
 
-
 =head1 ACKNOWLEDGEMENTS
 
+PG Music inc., for making Band-in-a-Box. I've used Band-in-a-Box for
+several years with great pleasure.
+
+The ancient and abandoned Band-In-A-Box File Converter 'biabconverter'
+by Alain Brenzikofer inspired me to write this.
 
 =head1 COPYRIGHT & LICENSE
 
@@ -449,7 +447,6 @@ Copyright 2016 Johan Vromans, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
-
 
 =cut
 
