@@ -1,19 +1,17 @@
 #! perl
 
-# Ease the life of the CPAN testers.
-exit 0 if $ENV{AUTOMATED_TESTING} && $] < 5.010000;
-
 use strict;
 use warnings;
-use ExtUtils::MakeMaker;
+use ExtUtils::MakeMaker '6.56';
 
 WriteMakefile(
     NAME                => 'Data::BiaB',
     AUTHOR              => 'Johan Vromans <jv@cpan.org>',
-    VERSION             => '0.10.1',
+    VERSION             => '0.11',
 #    VERSION_FROM        => 'lib/Data/BiaB.pm',
     ABSTRACT_FROM       => 'lib/Data/BiaB.pm',
     PL_FILES            => {},
+    MIN_PERL_VERSION	=> '5.010000',
     PREREQ_PM => {
         'Test::More' => 0,
 	'Data::Hexify' => 0,
